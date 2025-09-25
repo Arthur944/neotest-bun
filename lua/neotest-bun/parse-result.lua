@@ -108,7 +108,9 @@ local function processSuite(suite, results, file_path)
 			else
 				id = current_file_path .. "::" .. test_name
 			end
-			results[id] = result
+			if status ~= "skipped" then
+				results[id] = result
+			end
 		end
 	end
 

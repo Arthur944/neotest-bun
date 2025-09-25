@@ -132,9 +132,6 @@ describe("neotest-bun", function()
 					["spec/nestedDescribe.test.ts::outer::middle::inner::should do a thing"] = {
 						status = "passed",
 					},
-					["spec/nestedDescribe.test.ts::outer::middle::inner::this has a '"] = {
-						status = "skipped",
-					},
 				}),
 				inspect(result)
 			)
@@ -275,12 +272,6 @@ describe("neotest-bun", function()
 				inspect({
 					["src/app/modules/payment/services/payment/cash-sync-2.test.ts::logged out payment"] = {
 						status = "passed",
-					},
-					["src/app/modules/payment/services/payment/cash-sync-2.test.ts::logged in payment"] = {
-						status = "skipped",
-					},
-					["src/app/modules/payment/services/payment/cash-sync-2.test.ts::topup"] = {
-						status = "skipped",
 					},
 				}),
 				inspect(result)
