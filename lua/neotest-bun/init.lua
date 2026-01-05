@@ -277,7 +277,7 @@ Adapter = {
 			formatted_results[formatted_key] = result
 		end
 
-		local inspect = require("inspect")
+		local inspect = vim and vim.inspect or require("inspect")
 
 		-- Debug: Write XML content and parsed results to files for debugging
 		local debug_file_xml = io.open("./neotest-bun-debug-xml.txt", "w")
