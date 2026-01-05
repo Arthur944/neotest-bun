@@ -2,6 +2,12 @@ require("neotest.types")
 local lib = require("neotest.lib")
 local parser = require("neotest-bun.parse-result")
 
+---@class neotest-bun.Config
+---@field ignore_react_native_jest boolean Disable adapter for React Native projects with Jest config (default: false)
+local config = {
+	ignore_react_native_jest = false,
+}
+
 local function readXMLFile(file_path)
 	local file, err = io.open(file_path, "r")
 	if not file then
@@ -15,6 +21,72 @@ local function readXMLFile(file_path)
 	return content
 end
 
+--- Check if a file exists
+---@param path string
+---@return boolean
+local function file_exists(path)
+	local file = io.open(path, "r")
+	if file then
+		file:close()
+		return true
+	end
+	return false
+end
+
+--- Check if the project has a Jest config file
+---@param root_dir string
+---@return boolean
+local function has_jest_config(root_dir)
+	local jest_config_files = {
+		"jest.config.js",
+		"jest.config.ts",
+		"jest.config.mjs",
+		"jest.config.cjs",
+		"jest.config.json",
+	}
+
+	for _, config_file in ipairs(jest_config_files) do
+		if file_exists(root_dir .. "/" .. config_file) then
+			return true
+		end
+	end
+
+	return false
+end
+
+--- Check if the project has react-native as a dependency
+---@param root_dir string
+---@return boolean
+local function has_react_native(root_dir)
+	local package_json_path = root_dir .. "/package.json"
+	local file = io.open(package_json_path, "r")
+	if not file then
+		return false
+	end
+
+	local content = file:read("*all")
+	file:close()
+
+	-- Simple pattern matching for react-native in dependencies
+	-- This checks for "react-native" as a key in the JSON
+	if content:match('"react%-native"%s*:') then
+		return true
+	end
+
+	return false
+end
+
+--- Check if the adapter should be disabled for this project
+--- Returns true if ignore_react_native_jest is enabled and both Jest config and react-native are detected
+---@param root_dir string
+---@return boolean
+local function should_disable_adapter(root_dir)
+	if not config.ignore_react_native_jest then
+		return false
+	end
+	return has_jest_config(root_dir) and has_react_native(root_dir)
+end
+
 ---@class neotest.Adapter
 Adapter = {
 	name = "neotest-bun",
@@ -25,7 +97,11 @@ Adapter = {
 	---@param dir string @Directory to treat as cwd
 	---@return string | nil @Absolute root dir of test suite
 	root = function(dir)
-		return lib.files.match_root_pattern("package.json")(dir)
+		local root_dir = lib.files.match_root_pattern("package.json")(dir)
+		if root_dir and should_disable_adapter(root_dir) then
+			return nil
+		end
+		return root_dir
 	end,
 
 	---Filter directories when searching for test files
@@ -252,14 +328,19 @@ function Adapter.build_position(file_path, source, captured_nodes)
 	}
 end
 
-function Adapter.setup(_opts)
+---@param opts neotest-bun.Config|nil
+function Adapter.setup(opts)
+	opts = opts or {}
+	if opts.ignore_react_native_jest ~= nil then
+		config.ignore_react_native_jest = opts.ignore_react_native_jest
+	end
 	return Adapter
 end
 
 setmetatable(Adapter, {
+	---@param opts neotest-bun.Config|nil
 	__call = function(_, opts)
-		opts = opts or {}
-		return Adapter
+		return Adapter.setup(opts)
 	end,
 })
 
